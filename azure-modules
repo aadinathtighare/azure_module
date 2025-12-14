@@ -1,0 +1,147 @@
+# =============================
+# Root Module Structure
+# =============================
+#.
+#├── main.tf
+#├── variables.tf
+#├── outputs.tf
+#├── terraform.tfvars
+#└── modules
+#    ├── resource-group
+#    │   ├── main.tf
+#    │   ├── variables.tf
+#    │   └── outputs.tf
+#    └── storage-account
+#        ├── main.tf
+#        ├── variables.tf
+#        └── outputs.tf
+
+# =============================
+# modules/resource-group/main.tf
+# =============================
+resource "azurerm_resource_group" "this" {
+  name     = var.rg_name
+  location = var.location
+  tags     = var.tags
+}
+
+# =============================
+# modules/resource-group/variables.tf
+# =============================
+variable "rg_name" {
+  type = string
+}
+
+variable "location" {
+  type = string
+}
+
+variable "tags" {
+  type    = map(string)
+  default = {}
+}
+
+# =============================
+# modules/resource-group/outputs.tf
+# =============================
+output "rg_name" {
+  value = azurerm_resource_group.this.name
+}
+
+output "rg_location" {
+  value = azurerm_resource_group.this.location
+}
+
+# =============================
+# modules/storage-account/main.tf
+# =============================
+resource "azurerm_storage_account" "this" {
+  name                     = var.storage_account_name
+  resource_group_name      = var.resource_group_name
+  location                 = var.location
+  account_tier             = var.account_tier
+  account_replication_type = var.replication_type
+
+  tags = var.tags
+}
+
+# =============================
+# modules/storage-account/variables.tf
+# =============================
+variable "storage_account_name" {
+  type = string
+}
+
+variable "resource_group_name" {
+  type = string
+}
+
+variable "location" {
+  type = string
+}
+
+variable "account_tier" {
+  type    = string
+  default = "Standard"
+}
+
+variable "replication_type" {
+  type    = string
+  default = "LRS"
+}
+
+variable "tags" {
+  type    = map(string)
+  default = {}
+}
+
+# =============================
+# modules/storage-account/outputs.tf
+# =============================
+output "storage_account_name" {
+  value = azurerm_storage_account.this.name
+}
+
+# =============================
+# Root main.tf
+# =============================
+provider "azurerm" {
+  features {}
+}
+
+module "rg" {
+  source   = "./modules/resource-group"
+  rg_name  = var.rg_name
+  location = var.location
+  tags     = var.tags
+}
+
+module "storage" {
+  source                 = "./modules/storage-account"
+  storage_account_name   = var.storage_account_name
+  resource_group_name    = module.rg.rg_name
+  location               = module.rg.rg_location
+  tags                   = var.tags
+}
+
+# =============================
+# Root variables.tf
+# =============================
+variable "rg_name" {}
+variable "location" {}
+variable "storage_account_name" {}
+variable "tags" {
+  type    = map(string)
+  default = {}
+}
+
+# =============================
+# terraform.tfvars (example)
+# =============================
+rg_name               = "rg-demo-dev"
+location              = "East US"
+storage_account_name  = "demostorage12345"
+tags = {
+  env = "dev"
+  owner = "devops"
+}
